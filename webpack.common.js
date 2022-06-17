@@ -3,16 +3,45 @@ const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const glob = require('glob');
+
+function getEntry() {
+    const entry = {};
+    glob.sync('./src/pages/**/index.ts').forEach((file) => {
+        const name = file.match(/\/pages\/(.+)\/index.ts/)[1];
+        entry[name] = file;
+        console.log(entry)
+    });
+    return entry;
+}
+
+function getHtmlTemplate() {
+  return glob
+    .sync('./src/pages/**/index.html')
+    .map((file) => {
+      return { name: file.match(/\/pages\/(.+)\/index.html/)[1], path: file };
+    })
+    .map(
+      (template) =>
+        new HtmlWebpackPlugin({
+          template: template.path,
+          chunks: [template.name.toString()],
+          filename: `${template.name}/index.html`,
+        })
+    );
+}
+
 
 module.exports = {
     entry: {
-        layout: './src/js/layout.js',
-        index: './src/js/index.js'
+        index: './src/index.ts',
+        ...getEntry(),
     },
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: 'js/[name].js',
     },
+    devtool: 'inline-source-map',
     stats: {
         assets: true,
         children: true,
@@ -20,6 +49,11 @@ module.exports = {
     },
     module: {
         rules: [
+            {
+                test: /\.tsx?$/,
+                use: 'ts-loader',
+                exclude: /node_modules/,
+            },
             {
                 test: /\.js$/,
                 use: "babel-loader",
@@ -88,6 +122,9 @@ module.exports = {
             },
         ]
     },
+    resolve: {
+        extensions: ["", ".webpack.js", ".web.js", ".js", ".ts", ".html"]
+    },
     performance: {
         maxEntrypointSize: 700000,
         maxAssetSize: 700000,
@@ -99,14 +136,14 @@ module.exports = {
             filename: 'index.html',
             template: 'src/index.html',
             inject: 'body',
-            chunks: ["index", 'layout'],
+            chunks: ["index"],
             favicon: './src/assets/favicon.ico'
         }),
         new MiniCssExtractPlugin({
             // Options similar to the same options in webpackOptions.output
             // both options are optional
             filename: "[name].css"
-          }),
+        }),
         new CleanWebpackPlugin(),
-    ],  
+    ].concat(...getHtmlTemplate()),
 };
