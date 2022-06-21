@@ -3,12 +3,36 @@ const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const glob = require('glob');
+
+
+function getEntry() {
+    const entry = {};
+    glob.sync('./src/pages/**/index.js').forEach((file) => {
+        const name = file.match(/\/pages\/(.+)\/index.js/)[1];
+        entry[name] = file;
+    });
+    return entry;
+}
+
+function getHtmlTemplate() {
+    return glob
+        .sync('./src/pages/**/index.html')
+        .map((file) => {
+            return { name: file.match(/\/pages\/(.+)\/index.html/)[1], path: file };
+        })
+        .map(
+            (template) =>
+                new HtmlWebpackPlugin({
+                    template: template.path,
+                    chunks: [template.name.toString()],
+                    filename: `${template.name}.html`,
+                })
+        );
+}
 
 module.exports = {
-    entry: {
-        layout: './src/js/layout.js',
-        index: './src/js/index.js'
-    },
+    entry: getEntry(),
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: 'js/[name].js',
@@ -20,6 +44,11 @@ module.exports = {
     },
     module: {
         rules: [
+            {
+                test: /\.tsx?$/,
+                use: 'ts-loader',
+                exclude: /node_modules/,
+            },
             {
                 test: /\.js$/,
                 use: "babel-loader",
@@ -95,18 +124,12 @@ module.exports = {
     },
 
     plugins: [
-        new HtmlWebpackPlugin({
-            filename: 'index.html',
-            template: 'src/index.html',
-            inject: 'body',
-            chunks: ["index", 'layout'],
-            favicon: './src/assets/favicon.ico'
-        }),
+        ...getHtmlTemplate(),
         new MiniCssExtractPlugin({
             // Options similar to the same options in webpackOptions.output
             // both options are optional
             filename: "[name].css"
-          }),
+        }),
         new CleanWebpackPlugin(),
-    ],  
+    ],
 };
