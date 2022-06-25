@@ -8,8 +8,9 @@ const glob = require('glob');
 
 function getEntry() {
     const entry = {};
-    glob.sync('./src/pages/**/index.js').forEach((file) => {
-        const name = file.match(/\/pages\/(.+)\/index.js/)[1];
+
+    glob.sync('./src/pages/**/index.ts').forEach((file) => {
+        const name = file.match(/\/pages\/(.+)\/index.ts/)[1];
         entry[name] = file;
     });
     return entry;
@@ -32,7 +33,9 @@ function getHtmlTemplate() {
 }
 
 module.exports = {
-    entry: getEntry(),
+    entry: {
+        ...getEntry()
+    },
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: 'js/[name].js',
